@@ -1,0 +1,9 @@
+{
+  "name": "Easy CR",
+  "short_name": "Easy CR",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0066cc",
+  "icons": []
+}
