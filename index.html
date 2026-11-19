@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Générateur de CR</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    /* Empêche le zoom automatique sur Safari iOS lors du focus sur un champ */
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+</style>
+</head>
+<body class="bg-gray-100 p-2 sm:p-4 font-sans flex flex-col lg:flex-row gap-4 lg:gap-6 pb-20 lg:pb-4">
+
+<!-- Formulaire de saisie -->
+<div class="w-full lg:w-1/2 bg-white p-4 sm:p-6 rounded shadow">
+    <h2 class="text-xl font-bold mb-4">Compte Rendu d'Activité</h2>
+    
+    <!-- Période, Date et Réseau -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div id="periodeContainer" class="p-3 rounded-lg transition-colors duration-300" style="background-color: #DBEAFE;">
+            <div class="flex justify-between items-center mb-2">
+                <label class="block text-sm font-bold text-gray-800">Période et Date</label>
+                <div class="flex gap-3 text-sm bg-white px-2.5 py-1.5 rounded shadow-sm">
+                    <label class="cursor-pointer flex items-center gap-1 font-semibold text-gray-700">
+                        <input type="radio" name="periode" value="Jour" onchange="updateCR()" class="w-4 h-4"> 
+                        <span class="text-yellow-500 text-lg leading-none">☀️</span> Jour
+                    </label>
+                    <label class="cursor-pointer flex items-center gap-1 font-semibold text-gray-700">
+                        <input type="radio" name="periode" value="Nuit" checked onchange="updateCR()" class="w-4 h-4"> 
+                        <span class="text-lg leading-none">🌙</span> Nuit
+                    </label>
+                </div>
+            </div>
+            <input type="date" id="dateSaisie" class="w-full border p-2 rounded shadow-inner transition-colors duration-300" style="background-color: #EFF6FF;" oninput="updateCR()">
+        </div>
+        
+        <div class="grid grid-cols-3 gap-2 items-end">
+            <div>
+                <label class="block text-sm font-bold mb-1">Réseau</label>
+                <select id="reseau" class="w-full border p-2 rounded bg-white" onchange="updateLigneOptions(); updateSystemeOptions(); updateCR();">
+                    <option value="">Choix</option>
+                    <option value="RER">RER</option>
+                    <option value="Metro">Métro</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-bold mb-1">Ligne</label>
+                <select id="ligne" class="w-full border p-2 rounded bg-white" onchange="updateSystemeOptions(); updateCR();">
+                    <option value="">-</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-bold mb-1">Système</label>
+                <select id="systeme" class="w-full border p-2 rounded bg-white" onchange="updateCR();">
+                    <option value="">-</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zone et Travaux -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div>
+            <label class="block text-sm font-bold mb-1">Zone d'activité</label>
+            <input type="text" id="zone" class="w-full border p-2 rounded" oninput="updateCR()">
+        </div>
+        <div>
+            <label class="block text-sm font-bold mb-1">Type de travaux</label>
+            <input type="text" id="travaux" class="w-full border p-2 rounded" oninput="updateCR()">
+        </div>
+    </div>
+
+    <!-- Intervenants -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div>
+            <label class="block text-sm font-bold mb-1">Intervenants RATP</label>
+            <input type="text" id="ratp" class="w-full border p-2 rounded" oninput="updateCR()">
+        </div>
+        <div>
+            <label class="block text-sm font-bold mb-1">Industriel</label>
+            <input type="text" id="industriel" class="w-full border p-2 rounded" oninput="updateCR()">
+        </div>
+    </div>
+
+    <!-- Chronologie -->
+    <h3 class="font-bold border-b pb-1 mb-3 mt-6">Chronologie</h3>
+    <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4 items-start">
+        <div>
+            <label class="block text-sm mb-1">OT donné</label>
+            <input type="time" id="otDonne" class="w-full border p-2 rounded" oninput="updateCR()">
+        </div>
+        <div>
+            <label class="block text-sm mb-1">Couverture posée</label>
+            <input type="time" id="couvPosee" class="w-full border p-2 rounded transition-colors" oninput="updateCR()">
+        </div>
+        <div>
+            <label class="block text-sm mb-1">OT rendu</label>
+            <input type="time" id="otRendu" class="w-full border p-2 rounded" oninput="updateCR()">
+        </div>
+        <div>
+            <label class="block text-sm mb-1">Couverture rendue</label>
+            <input type="time" id="couvRendue" class="w-full border p-2 rounded transition-colors" oninput="updateCR()" placeholder="Défaut: OT rendu">
+        </div>
+        <div class="col-span-2 sm:col-span-1">
+            <label class="block text-sm mb-1">Fin activité</label>
+            <input type="time" id="finActivite" class="w-full border p-2 rounded" oninput="updateCR()">
+        </div>
+        
+        <div class="col-span-2 sm:col-span-1 bg-gray-50 border border-gray-300 p-2 rounded">
+            <label class="block text-sm mb-1 font-bold text-gray-700">Appel PCC - horaire</label>
+            <div class="flex gap-2">
+                <input type="time" id="heurePcc" class="w-1/2 border p-1.5 rounded bg-white" oninput="updateCR()">
+                <select id="bilanPcc" class="w-1/2 border p-1.5 rounded bg-white" onchange="togglePccDetail(); updateCR()">
+                    <option value="RAS">RAS</option>
+                    <option value="Anomalie">Anomalie</option>
+                </select>
+            </div>
+        </div>
+        <div id="pccDetailContainer" class="col-span-2 hidden mt-1">
+            <label class="block text-sm text-red-600 font-bold mb-1">Détail du problème signalé au PCC :</label>
+            <textarea id="detailPcc" class="w-full border border-red-400 p-2 rounded h-16" oninput="updateCR()"></textarea>
+        </div>
+    </div>
+
+    <!-- Intervention technique -->
+    <h3 class="font-bold border-b pb-1 mb-3 mt-6">Intervention technique</h3>
+    <div class="mb-4">
+        <label class="block text-sm font-bold mb-1">Actions réalisées</label>
+        <textarea id="actions" class="w-full border p-2 rounded h-24" oninput="updateCR()"></textarea>
+    </div>
+
+    <div class="mb-4">
+        <label class="block text-sm font-bold mb-1">Mesures</label>
+        <div id="mesuresContainer">
+            <div class="flex flex-wrap sm:flex-nowrap gap-2 mb-3 sm:mb-2 mesure-row bg-gray-50 sm:bg-transparent p-2 sm:p-0 rounded border sm:border-0">
+                <input type="text" placeholder="Équipement" class="w-full sm:w-2/5 border p-2 rounded equipement bg-white" oninput="updateCR()">
+                <input type="text" placeholder="Avant" class="w-[48%] sm:w-1/4 border p-2 rounded mesure-avant bg-white" oninput="updateCR()">
+                <input type="text" placeholder="Après" class="w-[48%] sm:w-1/4 border p-2 rounded mesure-apres bg-white" oninput="updateCR()">
+            </div>
+        </div>
+        <button type="button" onclick="addMesureRow()" class="bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded text-sm w-full sm:w-auto">+ Ajouter une mesure</button>
+    </div>
+
+    <div class="mb-2">
+        <label class="block text-sm font-bold mb-1">Incident et/ou commentaires</label>
+        <textarea id="incidents" class="w-full border p-2 rounded h-16" oninput="updateCR()">RAS</textarea>
+    </div>
+</div>
+
+<!-- Zone d'aperçu et de copie -->
+<div class="w-full lg:w-1/2 flex flex-col">
+    <div class="bg-white p-4 sm:p-6 rounded shadow flex-grow overflow-x-auto" id="apercuContainer">
+        <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 lg:hidden">Aperçu du rendu</h3>
+        <!-- Ajout de contenteditable="true" pour forcer iOS à autoriser la sélection du contenu -->
+        <div id="apercuHtml" contenteditable="true" style="outline: none;">
+            <p style="font-family: Calibri, sans-serif; font-size: 14px; margin-bottom: 10px; color: #000000;"><font face="Calibri, sans-serif" color="#000000">Bonjour, ci-joint le CR,</font></p>
+            <table width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse: collapse; font-family: Calibri, sans-serif; font-size: 14px;">
+                <tr>
+                    <th colspan="2" bgcolor="#262626" style="background-color: #262626; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px; text-align: left; font-weight: bold;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><span id="outTitre">Compte Rendu d'Activité</span></font>
+                    </th>
+                </tr>
+                <tr>
+                    <td bgcolor="#3F704D" width="30%" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><strong>Date Intervention</strong></font>
+                    </td>
+                    <td bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><span id="outDate"></span></font>
+                    </td>
+                </tr>
+                <tr id="rowLigne" style="display:none;">
+                    <td bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><strong>Ligne</strong></font>
+                    </td>
+                    <td bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><span id="outLigne"></span></font>
+                    </td>
+                </tr>
+                <tr id="rowTravaux" style="display:none;">
+                    <td bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><strong>Travaux</strong></font>
+                    </td>
+                    <td bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><span id="outTravaux"></span></font>
+                    </td>
+                </tr>
+                <tr id="rowZone" style="display:none;">
+                    <td bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><strong>Zone</strong></font>
+                    </td>
+                    <td bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><span id="outZone"></span></font>
+                    </td>
+                </tr>
+                <tr id="rowRatp" style="display:none;">
+                    <td bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><strong>Intervenant(s) RATP</strong></font>
+                    </td>
+                    <td bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><span id="outRatp"></span></font>
+                    </td>
+                </tr>
+                <tr id="rowIndustriel" style="display:none;">
+                    <td bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><strong>Industriel</strong></font>
+                    </td>
+                    <td bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><span id="outIndustriel"></span></font>
+                    </td>
+                </tr>
+                <tr id="rowHeureDebut" style="display:none;">
+                    <td bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><strong>Heure début activité</strong></font>
+                    </td>
+                    <td bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><span id="outHeureDebut"></span></font>
+                    </td>
+                </tr>
+                <tr id="rowHeureFin" style="display:none;">
+                    <td bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><strong>Heure fin activité</strong></font>
+                    </td>
+                    <td bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><span id="outHeureFin"></span></font>
+                    </td>
+                </tr>
+                <tr>
+                    <th colspan="2" bgcolor="#262626" style="background-color: #262626; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px; text-align: left; font-weight: bold;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF">Activités</font>
+                    </th>
+                </tr>
+                <tr id="rowActions" style="display:none;">
+                    <td colspan="2" bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><strong>Action(s) réalisée(s) :</strong><br><span id="outActions" style="white-space: pre-wrap;"></span></font>
+                    </td>
+                </tr>
+                <tr id="rowMesures" style="display:none;">
+                    <td colspan="2" bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF">
+                            <strong>MESURES :</strong><br>
+                            <table width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse: collapse; margin-top: 5px;" id="outMesuresTable">
+                            </table>
+                        </font>
+                    </td>
+                </tr>
+                <tr>
+                    <th colspan="2" bgcolor="#262626" style="background-color: #262626; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px; text-align: left; font-weight: bold;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF">Incident et/ou commentaires</font>
+                    </th>
+                </tr>
+                <tr id="rowIncidents">
+                    <td colspan="2" bgcolor="#3F704D" style="background-color: #3F704D; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><span id="outIncidents" style="white-space: pre-wrap;">RAS</span></font>
+                    </td>
+                </tr>
+                <tr id="rowPccDetail" style="display:none;">
+                    <td colspan="2" bgcolor="#DC2626" style="background-color: #DC2626; color: #FFFFFF; border: 1px solid #FFFFFF; padding: 5px;">
+                        <font face="Calibri, sans-serif" color="#FFFFFF"><strong>Détail Anomalie PCC :</strong><br><span id="outPccDetail" style="white-space: pre-wrap;"></span></font>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Barre de bouton fixe en bas sur mobile, normale sur PC -->
+    <div class="fixed bottom-0 left-0 right-0 p-3 bg-white border-t shadow-lg lg:static lg:bg-transparent lg:border-0 lg:shadow-none lg:p-0 lg:mt-4 z-50">
+        <button id="btnCopy" onclick="copyToClipboard()" class="bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-bold py-3 px-4 rounded w-full shadow transition-colors">
+            Copier avec mise en forme
+        </button>
+    </div>
+</div>
+
+<script>
+    function updateLigneOptions() {
+        const reseau = document.getElementById('reseau').value;
+        const ligneSelect = document.getElementById('ligne');
+        
+        ligneSelect.options.length = 0;
+        ligneSelect.options.add(new Option("-", ""));
+        
+        if (reseau === 'RER') {
+            ['A', 'B'].forEach(l => ligneSelect.options.add(new Option(l, l)));
+        } else if (reseau === 'Metro') {
+            for (let i = 1; i <= 14; i++) {
+                ligneSelect.options.add(new Option(i.toString(), i.toString()));
+            }
+        }
+    }
+
+    function updateSystemeOptions() {
+        const reseau = document.getElementById('reseau').value;
+        const ligne = document.getElementById('ligne').value;
+        const systemeSelect = document.getElementById('systeme');
+        
+        systemeSelect.options.length = 0;
+        systemeSelect.options.add(new Option("-", ""));
+        
+        if (reseau === 'Metro') {
+            systemeSelect.options.add(new Option("SAET", "SAET"));
+            systemeSelect.options.add(new Option("OCTYS", "OCTYS"));
+        } else if (reseau === 'RER') {
+            if (ligne === 'A') {
+                systemeSelect.options.add(new Option("SACEM", "SACEM"));
+                systemeSelect.options.add(new Option("KCVB", "KCVB"));
+            } else if (ligne === 'B') {
+                systemeSelect.options.add(new Option("NExTEO", "NExTEO"));
+                systemeSelect.options.add(new Option("KCVP", "KCVP"));
+            }
+        }
+    }
+
+    function togglePccDetail() {
+        const bilan = document.getElementById('bilanPcc').value;
+        document.getElementById('pccDetailContainer').style.display = (bilan === 'Anomalie') ? 'block' : 'none';
+    }
+
+    function addMesureRow() {
+        const container = document.getElementById('mesuresContainer');
+        const row = document.createElement('div');
+        row.className = 'flex flex-wrap sm:flex-nowrap gap-2 mb-3 sm:mb-2 mesure-row bg-gray-50 sm:bg-transparent p-2 sm:p-0 rounded border sm:border-0 relative';
+        row.innerHTML = `
+            <input type="text" placeholder="Équipement" class="w-full sm:w-2/5 border p-2 rounded equipement bg-white" oninput="updateCR()">
+            <input type="text" placeholder="Avant" class="w-[42%] sm:w-1/4 border p-2 rounded mesure-avant bg-white" oninput="updateCR()">
+            <input type="text" placeholder="Après" class="w-[42%] sm:w-1/4 border p-2 rounded mesure-apres bg-white" oninput="updateCR()">
+            <button type="button" onclick="this.parentElement.remove(); updateCR()" class="text-red-600 font-bold px-3 py-2 bg-red-50 sm:bg-transparent rounded">✕</button>
+        `;
+        container.appendChild(row);
+        updateCR();
+    }
+
+    function parseNightTime(t) {
+        if (!t) return null;
+        let [h, m] = t.split(':').map(Number);
+        if (h < 12) h += 24; 
+        return h * 60 + m;
+    }
+
+    function getDateStrings(dateStr, periode) {
+        if (!dateStr) return { affichage: "", entete: "" };
+        
+        const [y, m, d] = dateStr.split('-');
+        const d1 = new Date(y, m - 1, d);
+        
+        const fmtAffichage = (dateObj) => dateObj.toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit', year: 'numeric'});
+        const fmtEntete = (dateObj) => dateObj.toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit', year: '2-digit'});
+        
+        if (periode === 'Jour') {
+            return {
+                affichage: `Jour du ${fmtAffichage(d1)}`,
+                entete: `CR Jour du ${fmtEntete(d1)}`
+            };
+        } else {
+            const d2 = new Date(y, m - 1, d);
+            d2.setDate(d2.getDate() + 1);
+            return {
+                affichage: `Nuit du ${fmtAffichage(d1)} au ${fmtAffichage(d2)}`,
+                entete: `CR Nuit du ${fmtEntete(d1)} au ${fmtEntete(d2)}`
+            };
+        }
+    }
+
+    function updateCR() {
+        try {
+            const dateStr = document.getElementById('dateSaisie').value;
+            const periode = document.querySelector('input[name="periode"]:checked').value;
+            const reseauVal = document.getElementById('reseau').value;
+            const ligneVal = document.getElementById('ligne').value;
+            const systemeVal = document.getElementById('systeme').value;
+            
+            const periodeContainer = document.getElementById('periodeContainer');
+            const dateInput = document.getElementById('dateSaisie');
+            if (periode === 'Jour') {
+                periodeContainer.style.backgroundColor = '#FEF9C3'; 
+                dateInput.style.backgroundColor = '#FEFCE8';
+            } else {
+                periodeContainer.style.backgroundColor = '#DBEAFE'; 
+                dateInput.style.backgroundColor = '#EFF6FF';
+            }
+            
+            const dates = getDateStrings(dateStr, periode);
+            document.getElementById('outDate').innerText = dates.affichage;
+
+            let txtLigne = '';
+            let enteteReseauLigne = '';
+            
+            if (reseauVal && ligneVal) {
+                const reseauTxt = reseauVal === 'Metro' ? 'Métro' : 'RER';
+                txtLigne = `${reseauTxt} ${ligneVal}`;
+                enteteReseauLigne = reseauVal === 'Metro' ? `[Ligne ${ligneVal}]` : `[RER ${ligneVal}]`;
+            }
+            
+            document.getElementById('outLigne').innerText = txtLigne;
+            document.getElementById('rowLigne').style.display = txtLigne ? '' : 'none';
+
+            let texteTitre = "Compte Rendu d'Activité";
+            if (enteteReseauLigne || systemeVal || dates.entete) {
+                let elements = [];
+                if (enteteReseauLigne) elements.push(enteteReseauLigne);
+                if (systemeVal) elements.push(systemeVal);
+                
+                let prefixeStr = elements.join(' ');
+                if (prefixeStr && dates.entete) {
+                    texteTitre += ` - ${prefixeStr} - ${dates.entete}`;
+                } else if (prefixeStr || dates.entete) {
+                    texteTitre += ` - ${prefixeStr}${dates.entete}`;
+                }
+            }
+            document.getElementById('outTitre').innerText = texteTitre;
+
+            const fields = [
+                {id: 'travaux', out: 'outTravaux', row: 'rowTravaux'},
+                {id: 'zone', out: 'outZone', row: 'rowZone'},
+                {id: 'ratp', out: 'outRatp', row: 'rowRatp'},
+                {id: 'industriel', out: 'outIndustriel', row: 'rowIndustriel'}
+            ];
+
+            fields.forEach(f => {
+                const val = document.getElementById(f.id).value.trim();
+                document.getElementById(f.out).innerText = val;
+                document.getElementById(f.row).style.display = val ? '' : 'none';
+            });
+
+            const otDonne = document.getElementById('otDonne').value;
+            const couvPosee = document.getElementById('couvPosee').value;
+            const inputCouvPosee = document.getElementById('couvPosee');
+            
+            if (otDonne && couvPosee && parseNightTime(couvPosee) < parseNightTime(otDonne)) {
+                inputCouvPosee.style.borderColor = 'red';
+                inputCouvPosee.style.backgroundColor = '#FECACA';
+            } else {
+                inputCouvPosee.style.borderColor = '';
+                inputCouvPosee.style.backgroundColor = '';
+            }
+
+            const otRendu = document.getElementById('otRendu').value;
+            const couvRendueSaisie = document.getElementById('couvRendue').value;
+            const inputCouvRendue = document.getElementById('couvRendue');
+            
+            if (otRendu && couvRendueSaisie && parseNightTime(couvRendueSaisie) > parseNightTime(otRendu)) {
+                inputCouvRendue.style.borderColor = 'red';
+                inputCouvRendue.style.backgroundColor = '#FECACA';
+            } else {
+                inputCouvRendue.style.borderColor = '';
+                inputCouvRendue.style.backgroundColor = '';
+            }
+
+            let heureDebutHtml = "";
+            if (otDonne) heureDebutHtml += `${otDonne} Obtention de l'OT<br>`;
+            if (couvPosee) heureDebutHtml += `${couvPosee} Couvertures posées`;
+            document.getElementById('outHeureDebut').innerHTML = heureDebutHtml;
+            document.getElementById('rowHeureDebut').style.display = heureDebutHtml ? '' : 'none';
+
+            let heureFinHtml = "";
+            let couvRendue = couvRendueSaisie;
+            const finActivite = document.getElementById('finActivite').value;
+            
+            if (!couvRendue && otRendu) couvRendue = otRendu;
+
+            if (finActivite) heureFinHtml += `${finActivite} Fin d'activité<br>`;
+            if (couvRendue) heureFinHtml += `${couvRendue} Couvertures rendues<br>`;
+            if (otRendu) heureFinHtml += `${otRendu} OT rendu<br>`;
+
+            const heurePcc = document.getElementById('heurePcc').value;
+            const bilanPcc = document.getElementById('bilanPcc').value;
+            const detailPcc = document.getElementById('detailPcc').value.trim();
+            
+            // Formatage de la ligne PCC avec Anomalie en rouge
+            if (heurePcc) {
+                let pccTexte = `${heurePcc} Appel PCC : `;
+                if (bilanPcc === 'Anomalie') {
+                    pccTexte += `<font color="#FF0000"><b>Anomalie</b></font>`;
+                } else {
+                    pccTexte += `RAS`;
+                }
+                heureFinHtml += `${pccTexte}<br>`;
+            }
+
+            if (heureFinHtml.endsWith('<br>')) {
+                heureFinHtml = heureFinHtml.slice(0, -4);
+            }
+
+            document.getElementById('outHeureFin').innerHTML = heureFinHtml;
+            document.getElementById('rowHeureFin').style.display = heureFinHtml ? '' : 'none';
+
+            const actions = document.getElementById('actions').value.trim();
+            document.getElementById('outActions').innerText = actions;
+            document.getElementById('rowActions').style.display = actions ? '' : 'none';
+
+            const mesureRows = document.querySelectorAll('.mesure-row');
+            let mesuresHtml = '';
+            let hasMesures = false;
+            
+            mesureRows.forEach(row => {
+                const eq = row.querySelector('.equipement').value.trim();
+                const av = row.querySelector('.mesure-avant').value.trim();
+                const ap = row.querySelector('.mesure-apres').value.trim();
+                
+                if (eq || av || ap) {
+                    hasMesures = true;
+                    mesuresHtml += `
+                        <tr>
+                            <td bgcolor="#3F704D" style="border: 1px solid #FFFFFF; padding: 3px; width: 40%; background-color: #3F704D; color: #FFFFFF;"><font face="Calibri, sans-serif" color="#FFFFFF">${eq}</font></td>
+                            <td bgcolor="#3F704D" style="border: 1px solid #FFFFFF; padding: 3px; width: 30%; background-color: #3F704D; color: #FFFFFF;"><font face="Calibri, sans-serif" color="#FFFFFF">Avant : ${av}</font></td>
+                            <td bgcolor="#3F704D" style="border: 1px solid #FFFFFF; padding: 3px; width: 30%; background-color: #3F704D; color: #FFFFFF;"><font face="Calibri, sans-serif" color="#FFFFFF">Après : ${ap}</font></td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            document.getElementById('outMesuresTable').innerHTML = mesuresHtml;
+            const rowMesures = document.getElementById('rowMesures');
+            rowMesures.hidden = !hasMesures;
+            rowMesures.style.display = hasMesures ? 'table-row' : 'none';
+
+            const incidents = document.getElementById('incidents').value.trim();
+            document.getElementById('outIncidents').innerText = incidents || 'RAS';
+
+            // Affichage de la nouvelle ligne Anomalie PCC
+            const rowPccDetail = document.getElementById('rowPccDetail');
+            if (bilanPcc === 'Anomalie' && detailPcc) {
+                document.getElementById('outPccDetail').innerText = detailPcc;
+                rowPccDetail.style.display = 'table-row';
+            } else {
+                rowPccDetail.style.display = 'none';
+            }
+            
+        } catch (error) {
+            console.error("Erreur lors de la mise à jour du CR :", error);
+        }
+    }
+
+    function showCopyFeedback() {
+        const btn = document.getElementById('btnCopy');
+        const originalText = btn.innerText;
+        btn.innerText = "✓ Copié avec succès !";
+        btn.classList.replace('bg-green-600', 'bg-blue-600');
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.classList.replace('bg-blue-600', 'bg-green-600');
+        }, 2500);
+    }
+
+    function copyToClipboard() {
+        // Préparation : masquer les lignes vides temporairement pour ne pas les copier
+        document.querySelectorAll('#apercuHtml tr').forEach(row => {
+            if (row.style.display === 'none') {
+                row.setAttribute('data-hidden', 'true');
+                row.remove();
+            }
+        });
+
+        const element = document.getElementById('apercuHtml');
+        const selection = window.getSelection();
+        const range = document.createRange();
+        
+        // Sélectionne le contenu visible
+        range.selectNodeContents(element);
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        let success = false;
+        try {
+            // Exécute la copie sur la sélection actuelle (fonctionne sur iOS)
+            success = document.execCommand('copy');
+            if (success) showCopyFeedback();
+        } catch (err) {
+            console.error('Échec de la copie:', err);
+            alert("Échec de la copie. Sélectionnez manuellement le texte.");
+        }
+
+        // Nettoyage : retirer la sélection
+        selection.removeAllRanges();
+
+        // Restauration : forcer un updateCR pour remettre les lignes cachées si besoin
+        updateCR();
+    }
+    
+    window.addEventListener('DOMContentLoaded', () => {
+        updateCR();
+    });
+</script>
+</body>
+</html>
